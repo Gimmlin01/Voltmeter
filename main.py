@@ -130,7 +130,7 @@ class Plotter(pg.QtCore.QThread):
         super(Plotter, self).__init__()
         self._stop_event = threading.Event()
         self.inQueue=inQueue
-        self.data=[[0,0]]
+        self.data=np.empty([0,2])
 
     #make Thead stoppable
     def stop(self,reason=""):
