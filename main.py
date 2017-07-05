@@ -1,24 +1,26 @@
 #! /usr/bin/python3
 # author: Michael Auer
 
-#imports
+#Standart imports
 import sys
-from PyQt5.QtWidgets import QMainWindow,QApplication, QWidget, QMessageBox, QAction,qApp
+from PyQt5.QtWidgets import QMainWindow,QApplication, QWidget, QMessageBox, QAction
 from PyQt5.QtGui import QIcon
-
+#custom imports
+from Connection import Connection
 #define mainPage
 class MainPage(QMainWindow):
 
     def __init__(self):
         super().__init__()
         self.initUI()
+        self.Connection=None
 
 
     def initUI(self):
         exitAction = QAction(QIcon('icons/ExitIcon.png'), '&Exit', self)
         exitAction.setShortcut('Ctrl+Q')
         exitAction.setStatusTip('Exit application')
-        exitAction.triggered.connect(qApp.quit)
+        exitAction.triggered.connect(self.close)
 
         startAction = QAction(QIcon('icons/StartIcon.png'), '&Exit', self)
         startAction.setShortcut('Ctrl+R')
@@ -29,8 +31,8 @@ class MainPage(QMainWindow):
 
         menubar = self.menuBar()
         fileMenu = menubar.addMenu('&File')
-        fileMenu.addAction(exitAction)
         fileMenu.addAction(startAction)
+        fileMenu.addAction(exitAction)
         toolbar = self.addToolBar('Tool')
         toolbar.addAction(exitAction)
         toolbar.addAction(startAction)
@@ -42,17 +44,23 @@ class MainPage(QMainWindow):
         self.show()
 
     def startMeasure(self):
-        print("lol")
-    # def closeEvent(self, event):
-    #
-    #     reply = QMessageBox.question(self, 'Message',
-    #         "Are you sure to quit?", QMessageBox.Yes |
-    #         QMessageBox.No, QMessageBox.No)
-    #
-    #     if reply == QMessageBox.Yes:
-    #         event.accept()
-    #     else:
-    #         event.ignore()
+        self.Connection=Connection()
+
+
+    def closeEvent(self, event):
+        print("App called CloseEvent")
+        # reply = QMessageBox.question(self, 'Message',
+        #     "Are you sure to quit?", QMessageBox.Yes |
+        #     QMessageBox.No, QMessageBox.No)
+        #
+        # if reply == QMessageBox.Yes:
+        #     event.accept()
+        # else:
+        #     event.ignore()
+        if not self.Connection == None:
+            self.Connection.stop()
+        event.accept()
+
 
 
 if __name__ == "__main__":
