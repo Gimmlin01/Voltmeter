@@ -5,20 +5,19 @@
 import sys
 from PyQt5.QtWidgets import QMainWindow,QApplication, QWidget, QMessageBox, QAction,QHBoxLayout, QVBoxLayout,QTabWidget,QFileDialog
 from PyQt5.QtGui import QIcon
-import pyqtgraph as pg
 import numpy as np
-import time
-import threading
 
 #custom imports
-from Connection import Connection
+from Plotter import Plot
 
 #define mainPage
 class MainPage(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.initUI()
+
+        #Array to save the Multiple Plots
         self.Plots=[]
+        self.initUI()
 
     def initUI(self):
         #cosmeticals
@@ -51,10 +50,17 @@ class MainPage(QMainWindow):
         self.startAction.triggered.connect(self.startMeasure)
         self.startAction.setEnabled(False)
 
+        #add Action to Pause Measuring
+        self.pauseAction = QAction(QIcon('icons/PauseIcon.png'), '&Pause', self)
+        self.pauseAction.setShortcut('Ctrl+P')
+        self.pauseAction.setStatusTip('Pause Measurement')
+        self.pauseAction.triggered.connect(self.pauseMeasure)
+        self.pauseAction.setEnabled(False)
+
         #add Action to Stop Measuring
-        self.stopAction = QAction(QIcon('icons/PauseIcon.png'), '&Stop', self)
-        self.stopAction.setShortcut('Ctrl+P')
-        self.stopAction.setStatusTip('Pause Measurement')
+        self.stopAction = QAction(QIcon('icons/StopIcon.png'), '&Stop', self)
+        self.stopAction.setShortcut('Ctrl+C')
+        self.stopAction.setStatusTip('Stop Measurement')
         self.stopAction.triggered.connect(self.stopMeasure)
         self.stopAction.setEnabled(False)
 
@@ -72,6 +78,7 @@ class MainPage(QMainWindow):
         toolbar.addAction(self.exitAction)
         toolbar.addAction(self.newMeasurementAction)
         toolbar.addAction(self.startAction)
+        toolbar.addAction(self.pauseAction)
         toolbar.addAction(self.stopAction)
 
         #create Main Widget
@@ -99,30 +106,50 @@ class MainPage(QMainWindow):
 
     #function to start Measuring again
     def startMeasure(self):
-        self.tabWidget.currentWidget().findChild(Plot).start()
+        currPlot = self.tabWidget.currentWidget().findChild(Plot)
+        if currPlot.stopped():
+            currPlot.start()
+        else:
+            currPlot.unpause()
         self.startAction.setEnabled(False)
+        self.pauseAction.setEnabled(True)
         self.stopAction.setEnabled(True)
 
-    #function to stop Measuring
+    #function to pause Measuring
+    def pauseMeasure(self):
+        self.tabWidget.currentWidget().findChild(Plot).pause("User Paused")
+        self.startAction.setEnabled(True)
+        self.pauseAction.setEnabled(False)
+        self.stopAction.setEnabled(True)
+
+    #function to pause Measuring
     def stopMeasure(self):
         self.tabWidget.currentWidget().findChild(Plot).stop("User Stopped")
         self.startAction.setEnabled(True)
+        self.pauseAction.setEnabled(False)
         self.stopAction.setEnabled(False)
 
     #function to Handle if User Changes the Tab
     def tabChanged(self):
-        if self.tabWidget.currentWidget().findChild(Plot).stopped():
+        currPlot=self.tabWidget.currentWidget().findChild(Plot)
+        if currPlot.stopped():
             self.startAction.setEnabled(True)
+            self.pauseAction.setEnabled(False)
             self.stopAction.setEnabled(False)
+        elif currPlot.paused():
+            self.startAction.setEnabled(True)
+            self.pauseAction.setEnabled(False)
+            self.stopAction.setEnabled(True)
         else:
             self.startAction.setEnabled(False)
+            self.pauseAction.setEnabled(True)
             self.stopAction.setEnabled(True)
 
+    #function to save the data of the Current opened Plot
     def saveData(self):
         fileName = QFileDialog.getSaveFileName(self, 'Dialog Title', '', filter='.txt')
         if fileName:
             np.savetxt(fileName[0]+fileName[1],self.tabWidget.currentWidget().findChild(Plot).data)
-            print (fileName)
 
     #override the closeEvent function to catch the event and do things
     def closeEvent(self, event):
@@ -164,93 +191,11 @@ class MainPage(QMainWindow):
         else:
             event.accept()
 
-
-class Plot(pg.PlotWidget):
-    def __init__(self,parent):
-        super(Plot, self).__init__()
-
-        #save parent
-        self.parent=parent
-
-        #establish ConnectionP
-        self.Connection=Connection()
-
-        #Stop Event to make it stoppable
-        self._stop_event = threading.Event()
-
-        #Define Array to contain Measured Points
-        self.data=np.empty([0,2])
-
-        self.start()
-
-    def start(self):
-        #create new Plot Thread to liveplot things
-        self._stop_event.clear()
-        self.PlotThread=PlotThread(self)
-        self.PlotThread.newData.connect(self.updatePlot)
-        self.PlotThread.start()
-
-    #make Thead stoppable
-    def stop(self,reason=""):
-        if not self._stop_event.is_set():
-            self.PlotThread.stop()
-            self.PlotThread.wait()
-            self._stop_event.set()
-            print("Plot stopped: " + reason)
-
-    #function to check if Thread has stopped
-    def stopped(self):
-        return self._stop_event.is_set() and self.PlotThread.stopped()
-
-    #function to update the plot (must happen in Main Thread)
-    def updatePlot(self,data):
-        self.plot(data, clear=True)
-        #show status
-        self.parent.statusBar().showMessage("Working")
-
-
-#PlotThread Class inherits from QThread
-#looks for Items in Queue and if one found calls for an Plot update
-class PlotThread(pg.QtCore.QThread):
-    #newData Signal
-    newData = pg.QtCore.Signal(object)
-
-    def __init__(self,parent):
-        super(PlotThread, self).__init__()
-        self._stop_event = threading.Event()
-        self.parent=parent
-        self.inQueue=self.parent.Connection.outQueue
-
-
-    #make Thead stoppable
-    def stop(self,reason=""):
-        if not self._stop_event.is_set():
-            self._stop_event.set()
-            print("PlotThread stopped: " + reason)
-
-    #function to check if Thread has stopped
-    def stopped(self):
-        return self._stop_event.is_set()
-
-    #custom run function
-    def run(self):
-        print("Running Default PlotThread")
-        while not self.stopped():
-            #get Item from inQueue
-            inpData=self.inQueue.get()
-            if inpData == None:
-                self.stop("Input Queue shutdown")
-            else:
-                #append the Item to the data array
-                self.parent.data=np.append(self.parent.data,inpData,axis=0)
-                #broadcast the new data array
-                self.newData.emit(self.parent.data)
-
 if __name__ == "__main__":
     #create Main app
     app = QApplication(sys.argv)
 
-    #create new Window
+    #create new Window (opens a new Window if not bound into another widget)
     MainWindow=MainPage()
 
     #start main loop

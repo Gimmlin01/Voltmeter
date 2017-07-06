@@ -1,71 +1,107 @@
-#Plotting class
+#Plot class
 
-import threading
-from queue import Queue
-from time import sleep
+#imports
+import pyqtgraph as pg
 import numpy as np
+import threading
 
-plt = pg.plot()
+#custom imports
+from Connection import Connection
 
-def update(data):
-    plt.plot(data, clear=True)
-
-class Thread(pg.QtCore.QThread):
-    newData = pg.QtCore.Signal(object)
-    def run(self):
-        while True:
-            data = pg.np.random.normal(size=100)
-            # do NOT plot data from here!
-            self.newData.emit(data)
-            time.sleep(0.05)
-
-thread = Thread()
-thread.newData.connect(update)
-thread.start()
-
-
-class Plotter(object):
-    def __init__(self,inQueue=None,plot=None):
-        super(Plotter,self).__init__()
-        self._stop_event = threading.Event()
-        self.inQueue=inQueue
-        self.plot=plot
-        self.data=np.array([[0,0]])
-        self.UpdateThread=UpdateThread(self)
-        self.UpdateThread.start()
-
-    def stop(self,reason="",wait=True):
-        print("Plotter stop called: " + reason)
-        self.UpdateThread.stop()
-        if wait:
-            self.UpdateThread.join()
-        self._stop_event.set()
-        print("Plotter stopped")
-
-    def stopped(self):
-        return self._stop_event.is_set() and self.UpdateThread.stopped()
-
-class UpdateThread(threading.Thread):
+#Plot Class witch inherits from PlotWidget and holds the PlotData and has its
+#own Thead to liveplot things
+class Plot(pg.PlotWidget):
     def __init__(self,parent):
-        super(UpdateThread, self).__init__()
+        super(Plot, self).__init__()
+
+        #save parent
+        self.parent=parent
+        #Stop Event to make it stoppable
+        self._stop_event = threading.Event()
+        self._pause_event = threading.Event()
+        #Define Array to contain Measured Points
+        self.data=np.empty([0,2])
+        #Start itself
+        self.start()
+
+    def start(self):
+        #it is now running
+        self._stop_event.clear()
+        #establish Connection
+        self.Connection=Connection()
+        #create new Plot Thread to liveplot things
+        self.PlotThread=PlotThread(self)
+        #connect the newData Signal to the updatePlot function
+        self.PlotThread.newData.connect(self.updatePlot)
+        #start the Thread
+        self.PlotThread.start()
+
+    #make Plot stoppable
+    def stop(self,reason=""):
+        if not self._stop_event.is_set():
+            self.Connection.stop()
+            #wati for the PlotThread to "finish"
+            self.PlotThread.wait()
+            self._stop_event.set()
+            print("Plot stopped: " + reason)
+
+    #make Plot pausable
+    def pause(self,reason=""):
+        self._pause_event.set()
+        self.Connection.pause()
+        print("Plot paused: " + reason)
+
+    def unpause(self):
+        self._pause_event.clear()
+        self.Connection.unpause()
+        print("Plot unpaused")
+
+    #function to check if Thread has stopped
+    def stopped(self):
+        return self._stop_event.is_set() and self.PlotThread.stopped()
+
+    def paused(self):
+        return self._pause_event.is_set()
+
+    #function to update the plot (must happen in Main Thread)
+    def updatePlot(self,data):
+        self.plot(data, clear=True)
+        #show status
+        self.parent.statusBar().showMessage("Working")
+
+
+#PlotThread Class inherits from QThread
+#looks for Items in Queue and if one found calls for an Plot update
+class PlotThread(pg.QtCore.QThread):
+    #newData Signal
+    newData = pg.QtCore.Signal(object)
+
+    def __init__(self,parent):
+        super(PlotThread, self).__init__()
         self._stop_event = threading.Event()
         self.parent=parent
+        self.inQueue=self.parent.Connection.outQueue
 
-    def stop(self):
-        self._stop_event.set()
-        print("UpdateThread stopped")
+    #make Thead stoppable
+    def stop(self,reason=""):
+        if not self._stop_event.is_set():
+            self._stop_event.set()
+            print("PlotThread stopped: " + reason)
 
-
+    #function to check if Thread has stopped
     def stopped(self):
         return self._stop_event.is_set()
 
+    #custom run function
     def run(self):
-        print("Running Default UpdateThread")
+        print("Running Default PlotThread")
         while not self.stopped():
-            inpData=self.parent.inQueue.get()
+            #get Item from inQueue
+            inpData=self.inQueue.get()
             if inpData == None:
-                self.parent.stop("Input Queue shutdown",False)
+                self.stop("Input Queue shutdown")
             else:
+                #append the Item to the data array
                 self.parent.data=np.append(self.parent.data,inpData,axis=0)
-                print(self.parent.data)
-                self.parent.plot.plot(self.parent.data)
+                #broadcast the new data array
+                self.newData.emit(self.parent.data)
