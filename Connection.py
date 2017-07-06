@@ -13,11 +13,12 @@ class Connection(object):
         self.measureThread.start()
 
     def stop(self,reason=""):
-        print("Connection stop called: " + reason)
-        self.measureThread.stop()
-        self.measureThread.join()
-        self._stop_event.set()
-        print("Connection stopped")
+        if not self._stop_event.is_set():
+            print("Connection stop called: " + reason)
+            self.measureThread.stop()
+            self.measureThread.join()
+            self._stop_event.set()
+            print("Connection stopped")
 
     def stopped(self):
         return self._stop_event.is_set() and self.measureThread.stopped()
@@ -30,9 +31,10 @@ class InputThread(threading.Thread):
         self.startTime=0
 
     def stop(self):
-        self.parent.outQueue.put(None)
-        self._stop_event.set()
-        print("InputThread stopped")
+        if not self._stop_event.is_set():
+            self.parent.outQueue.put(None)
+            self._stop_event.set()
+            print("InputThread stopped")
 
 
     def stopped(self):
@@ -46,4 +48,4 @@ class InputThread(threading.Thread):
         while not self.stopped():
             t=time.time()-self.startTime
             self.parent.outQueue.put([[t,-0.5*(t-20)*(t-20)+20]])
-            time.sleep(0.1)
+            time.sleep(0.01)
