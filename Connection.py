@@ -71,6 +71,7 @@ class InputThread(threading.Thread):
 
     def run(self):
         import random
+        import math
         import time
         print("Running Dummy InputThread")
         a=random.random()
@@ -78,7 +79,7 @@ class InputThread(threading.Thread):
         while not self.stopped():
             if not self.paused():
                 t=time.time()-self.startTime
-                self.parent.outQueue.put([[t,-0.5*a*(t-20)*(t-20)+20]])
+                self.parent.outQueue.put([[t,math.sin(a*t)]])
                 time.sleep(0.1)
             else:
                 time.sleep(0.5)

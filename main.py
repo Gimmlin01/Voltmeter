@@ -37,11 +37,17 @@ class MainPage(QMainWindow):
         self.newMeasurementAction.setStatusTip('Create New Measurement')
         self.newMeasurementAction.triggered.connect(self.newMeasure)
 
-        #add Action to Save the Data
+        #add Action to Save the Data of the current Plot
         self.saveDataAction = QAction(QIcon('icons/SaveIcon.png'), '&Save', self)
         self.saveDataAction.setShortcut('Ctrl+S')
         self.saveDataAction.setStatusTip('Save Plot Data')
         self.saveDataAction.triggered.connect(self.saveData)
+
+        #add Action to Load the Data
+        self.loadDataAction = QAction(QIcon('icons/LoadIcon.png'), '&Open', self)
+        self.loadDataAction.setShortcut('Ctrl+O')
+        self.loadDataAction.setStatusTip('Open saved Plot Data')
+        self.loadDataAction.triggered.connect(self.loadData)
 
         #add Action to Start Measuring again
         self.startAction = QAction(QIcon('icons/StartIcon.png'), '&Start', self)
@@ -70,6 +76,7 @@ class MainPage(QMainWindow):
         fileMenu = menubar.addMenu('&File')
         fileMenu.addAction(self.newMeasurementAction)
         fileMenu.addAction(self.saveDataAction)
+        fileMenu.addAction(self.loadDataAction)
         fileMenu.addAction(self.exitAction)
 
         #create Toolbar
@@ -83,9 +90,7 @@ class MainPage(QMainWindow):
 
         #create Main Widget
         self.tabWidget = QTabWidget()
-        self.tabWidget.tabsClosable=True
         self.tabWidget.currentChanged.connect(self.tabChanged)
-
         #set Central Widget to Main Widget
         self.setCentralWidget(self.tabWidget)
 
@@ -94,6 +99,9 @@ class MainPage(QMainWindow):
 
     #function to start a new Measuring
     def newMeasure(self):
+        self.newPlot().start()
+
+    def newPlot(self):
         #create new Plot
         plotWidget = Plot(self)
         self.Plots.append(plotWidget)
@@ -103,6 +111,7 @@ class MainPage(QMainWindow):
         plotLayout.addWidget(plotWidget)
         plotTab.setLayout(plotLayout)
         self.tabWidget.addTab(plotTab, 'Plot ' + str(len(self.Plots)))
+        return plotWidget
 
     #function to start Measuring again
     def startMeasure(self):
@@ -147,9 +156,18 @@ class MainPage(QMainWindow):
 
     #function to save the data of the Current opened Plot
     def saveData(self):
-        fileName = QFileDialog.getSaveFileName(self, 'Dialog Title', '', filter='.txt')
-        if fileName:
-            np.savetxt(fileName[0]+fileName[1],self.tabWidget.currentWidget().findChild(Plot).data)
+        fileName = QFileDialog.getSaveFileName(self, 'Dialog Title', '', filter='*.txt')
+        if fileName != "":
+            np.savetxt(fileName[0],self.tabWidget.currentWidget().findChild(Plot).data)
+
+    #function to load data to a new Plot
+    def loadData(self):
+        fileName = QFileDialog.getOpenFileName(self, 'Dialog Title', '', filter='*.txt')
+        if fileName != "":
+            loadedData = np.loadtxt(fileName[0])
+            plotWidget = self.newPlot()
+            plotWidget.data = loadedData
+            plotWidget.updatePlot()
 
     #override the closeEvent function to catch the event and do things
     def closeEvent(self, event):
