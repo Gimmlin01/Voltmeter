@@ -1,3 +1,4 @@
 *.txt
 *.ods
 __pycache__/
+*.py[cod]
