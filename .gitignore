@@ -1,2 +1,3 @@
 *.txt
 *.ods
+__pychache__/*

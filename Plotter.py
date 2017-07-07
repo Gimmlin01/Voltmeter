@@ -21,16 +21,18 @@ class Plot(pg.PlotWidget):
         self._pause_event = threading.Event()
         #Define Array to contain Measured Points
         self.data=np.empty([0,2])
-
-    def start(self):
-        #it is now running
-        self._stop_event.clear()
         #establish Connection
         self.Connection=Connection()
         #create new Plot Thread to liveplot things
         self.PlotThread=PlotThread(self)
         #connect the newData Signal to the updatePlot function
         self.PlotThread.newData.connect(self.updatePlot)
+
+    def start(self):
+        #it is now running
+        self._stop_event.clear()
+        #start the Connection
+        self.Connection.start()
         #start the Thread
         self.PlotThread.start()
 
@@ -62,16 +64,16 @@ class Plot(pg.PlotWidget):
         return self._pause_event.is_set()
 
     #function to update the plot (must happen in Main Thread)
-    def updatePlot(self):
+    def updatePlot(self,inpData):
         self.plot(self.data, clear=True)
         #show status
-        self.parent.statusBar().showMessage("Working")
+        self.parent.statusBar().showMessage("Working",1000)
 
 #PlotThread Class inherits from QThread
 #looks for Items in Queue and if one found calls for an Plot update
 class PlotThread(pg.QtCore.QThread):
     #newData Signal
-    newData = pg.QtCore.Signal()
+    newData = pg.QtCore.Signal(object)
 
     def __init__(self,parent):
         super(PlotThread, self).__init__()
@@ -101,4 +103,4 @@ class PlotThread(pg.QtCore.QThread):
                 #append the Item to the data array
                 self.parent.data=np.append(self.parent.data,inpData,axis=0)
                 #broadcast the new data array
-                self.newData.emit()
+                self.newData.emit(inpData)

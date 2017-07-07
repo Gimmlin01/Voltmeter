@@ -11,6 +11,9 @@ class Connection(object):
         self._pause_event = threading.Event()
         self.outQueue=Queue()
         self.measureThread=InputThread(self)
+
+    def start(self):
+        self._stop_event.clear()
         self.measureThread.start()
 
     def stop(self,reason=""):
