@@ -11,6 +11,9 @@ from Connection import Connection
 #Plot Class witch inherits from PlotWidget and holds the PlotData and has its
 #own Thead to liveplot things
 class Plot(pg.PlotWidget):
+    #newData Signal
+    newData = pg.QtCore.Signal(object)
+
     def __init__(self,parent):
         super(Plot, self).__init__()
 
@@ -21,16 +24,25 @@ class Plot(pg.PlotWidget):
         self._pause_event = threading.Event()
         #Define Array to contain Measured Points
         self.data=np.empty([0,2])
-        #establish Connection
-        self.Connection=Connection()
-        #create new Plot Thread to liveplot things
-        self.PlotThread=PlotThread(self)
+
+    def connect(self):
         #connect the newData Signal to the updatePlot function
-        self.PlotThread.newData.connect(self.updatePlot)
+        self.newData.connect(self.updatePlot)
+
+    def disconnectAll(self):
+        #try to disconnect all handlers connectet to newData
+        try:
+            self.newData.disconnect()
+        except TypeError:
+            pass
 
     def start(self):
         #it is now running
         self._stop_event.clear()
+        #establish Connection
+        self.Connection=Connection()
+        #create new Plot Thread to liveplot things
+        self.PlotThread=PlotThread(self)
         #start the Connection
         self.Connection.start()
         #start the Thread
@@ -72,8 +84,6 @@ class Plot(pg.PlotWidget):
 #PlotThread Class inherits from QThread
 #looks for Items in Queue and if one found calls for an Plot update
 class PlotThread(pg.QtCore.QThread):
-    #newData Signal
-    newData = pg.QtCore.Signal(object)
 
     def __init__(self,parent):
         super(PlotThread, self).__init__()
@@ -103,4 +113,4 @@ class PlotThread(pg.QtCore.QThread):
                 #append the Item to the data array
                 self.parent.data=np.append(self.parent.data,inpData,axis=0)
                 #broadcast the new data array
-                self.newData.emit(inpData)
+                self.parent.newData.emit(inpData)

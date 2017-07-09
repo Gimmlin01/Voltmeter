@@ -142,18 +142,28 @@ class MainPage(QMainWindow):
         self.stopAction.setEnabled(True)
 
     #function to pause Measuring
-    def stopMeasure(self):
-        self.tabWidget.currentWidget().findChild(Plot).stop("User Stopped")
-        self.startAction.setEnabled(True)
-        self.pauseAction.setEnabled(False)
-        self.stopAction.setEnabled(False)
+    def stopMeasure(self,plot=None):
+        stopPlot=None
+        #if plot is not specified stop current Plot
+        if plot==None:
+            stopPlot=self.tabWidget.currentWidget().findChild(Plot)
+            #if current plot is stoped change Actions
+            self.startAction.setEnabled(True)
+            self.pauseAction.setEnabled(False)
+            self.stopAction.setEnabled(False)
+        else:
+            stopPlot=plot
+        stopPlot.stop("User Stopped")
 
     #function to Handle if User Changes the Tab
     def tabChanged(self):
         currWidget=self.tabWidget.currentWidget()
         if not currWidget==None:
             currPlot=currWidget.findChild(Plot)
-            self.lcd.sourceChanged(currPlot)
+            for p in self.Plots:
+                p.disconnectAll()
+            currPlot.connect()
+            self.lcd.connectTo(currPlot)
             if currPlot.stopped():
                 self.startAction.setEnabled(True)
                 self.pauseAction.setEnabled(False)
@@ -170,11 +180,11 @@ class MainPage(QMainWindow):
             self.startAction.setEnabled(False)
             self.pauseAction.setEnabled(False)
             self.stopAction.setEnabled(False)
-            self.lcd.display(0)
+            self.lcd.display(0.000)
 
     #function to handle Tab Close
     def tabClosed(self,tab_index):
-        self.stopMeasure()
+        self.stopMeasure(self.tabWidget.widget(tab_index).findChild(Plot))
         self.tabWidget.removeTab(tab_index)
 
     #function to save the data of the Current opened Plot
@@ -197,7 +207,7 @@ class MainPage(QMainWindow):
 
     def toggleLcd(self):
         if not self.lcd.isVisible():
-            self.lcd.display(3.141)
+            self.lcd.display(0.000)
             self.lcd.show()
         else:
             self.lcd.close()
@@ -254,8 +264,8 @@ class LcdPage(QLCDNumber):
         self.setWindowTitle('LCD Display')
         self.setWindowIcon(QIcon('icons/AppIcon.png'))
 
-    def sourceChanged(self,plot):
-        plot.PlotThread.newData.connect(self.updateLcd)
+    def connectTo(self,plot):
+        plot.newData.connect(self.updateLcd)
 
 
     def updateLcd(self,inpData):
