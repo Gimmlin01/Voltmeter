@@ -109,12 +109,15 @@ class MainPage(QMainWindow):
 
     #function to start a new Measuring
     def newMeasure(self):
-        self.newPlot().start()
+        self.newPlot(start=True)
 
-    def newPlot(self):
+    #function to make a new Plot
+    def newPlot(self,start=False):
         #create new Plot
         plotWidget = Plot(self)
         self.Plots.append(plotWidget)
+        if start:
+            plotWidget.start()
         #New Plot Tab
         plotTab = QWidget()
         plotLayout = QVBoxLayout()
@@ -125,11 +128,16 @@ class MainPage(QMainWindow):
 
     #function to start Measuring again
     def startMeasure(self):
+        #find the current Plot in the displayed tab
         currPlot = self.tabWidget.currentWidget().findChild(Plot)
         if currPlot.stopped():
+            #if its stopped start it
             currPlot.start()
-        else:
+        elif currPlot.paused():
+            #if its paused start it
             currPlot.unpause()
+        else:
+            print("Plot neither stopped nor paused")
         self.startAction.setEnabled(False)
         self.pauseAction.setEnabled(True)
         self.stopAction.setEnabled(True)
@@ -141,29 +149,28 @@ class MainPage(QMainWindow):
         self.pauseAction.setEnabled(False)
         self.stopAction.setEnabled(True)
 
-    #function to pause Measuring
-    def stopMeasure(self,plot=None):
-        stopPlot=None
-        #if plot is not specified stop current Plot
-        if plot==None:
-            stopPlot=self.tabWidget.currentWidget().findChild(Plot)
-            #if current plot is stoped change Actions
-            self.startAction.setEnabled(True)
-            self.pauseAction.setEnabled(False)
-            self.stopAction.setEnabled(False)
-        else:
-            stopPlot=plot
-        stopPlot.stop("User Stopped")
+    #function to stop Measuring
+    def stopMeasure(self):
+        #stop current plot
+        self.tabWidget.currentWidget().findChild(Plot).stop("User Stopped")
+        #change Actions
+        self.startAction.setEnabled(True)
+        self.pauseAction.setEnabled(False)
+        self.stopAction.setEnabled(False)
 
     #function to Handle if User Changes the Tab
     def tabChanged(self):
         currWidget=self.tabWidget.currentWidget()
         if not currWidget==None:
             currPlot=currWidget.findChild(Plot)
+            #disconnect all Signals from all Plots (saves ressources), so they don't update their plot when not shown
             for p in self.Plots:
                 p.disconnectAll()
+            #connect the current Plot (live Updates)
             currPlot.connect()
+            #connect the Lcd to the current Plot
             self.lcd.connectTo(currPlot)
+            #fix Actions
             if currPlot.stopped():
                 self.startAction.setEnabled(True)
                 self.pauseAction.setEnabled(False)
@@ -184,7 +191,7 @@ class MainPage(QMainWindow):
 
     #function to handle Tab Close
     def tabClosed(self,tab_index):
-        self.stopMeasure(self.tabWidget.widget(tab_index).findChild(Plot))
+        self.tabWidget.widget(tab_index).findChild(Plot).stop("Tab Closed")
         self.tabWidget.removeTab(tab_index)
 
     #function to save the data of the Current opened Plot
@@ -202,9 +209,10 @@ class MainPage(QMainWindow):
         if fileName != "":
             loadedData = np.loadtxt(fileName)
             plotWidget = self.newPlot()
-            plotWidget.data = loadedData
+            plotWidget.data=loadedData
             plotWidget.updatePlot()
 
+    #function to toggle Lcd on and off
     def toggleLcd(self):
         if not self.lcd.isVisible():
             self.lcd.display(0.000)
@@ -227,10 +235,10 @@ class MainPage(QMainWindow):
         self.lcd.close()
         for p in self.Plots:
             #Stop Connection and its Thread
-            if p.Connection.stopped():
+            if p.connection.stopped():
                 print("Connection already stopped")
             else:
-                p.Connection.stop("App CloseEvent")
+                p.connection.stop("App CloseEvent")
             #Stop Plot and its Thread
             if p.stopped():
                 print("Plot already stopped")
@@ -253,6 +261,7 @@ class MainPage(QMainWindow):
         else:
             event.accept()
 
+#class for the LCD Page witch shows the Current Value
 class LcdPage(QLCDNumber):
     def __init__(self):
         super(LcdPage,self).__init__()
@@ -264,10 +273,11 @@ class LcdPage(QLCDNumber):
         self.setWindowTitle('LCD Display')
         self.setWindowIcon(QIcon('icons/AppIcon.png'))
 
+    #connect the updateLcd function to the newData signal of the given plot
     def connectTo(self,plot):
         plot.newData.connect(self.updateLcd)
 
-
+    #update displayed value
     def updateLcd(self,inpData):
         self.display(inpData[0][1])
 

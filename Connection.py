@@ -1,4 +1,5 @@
 #Default Connection class
+# author: Michael Auer
 
 import threading
 from queue import Queue
@@ -10,37 +11,37 @@ class Connection(object):
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self.outQueue=Queue()
-        self.measureThread=InputThread(self)
+        self.inputThread=InputThread(self)
 
     def start(self):
         self._stop_event.clear()
-        self.measureThread.start()
+        self.inputThread.start()
 
     def stop(self,reason=""):
         if not self._stop_event.is_set():
             print("Connection stop called: " + reason)
-            self.measureThread.stop()
-            self.measureThread.join()
+            self.inputThread.stop()
+            self.inputThread.join()
             self._stop_event.set()
             print("Connection stopped")
 
     def pause(self):
         if not self._pause_event.is_set():
             self._pause_event.set()
-            self.measureThread.pause()
+            self.inputThread.pause()
             print("Connection paused")
 
     def unpause(self):
         if self._pause_event.is_set():
             self._pause_event.clear()
-            self.measureThread.unpause()
+            self.inputThread.unpause()
             print("Connection started Again")
 
     def paused(self):
-        return self._pause_event.is_set() and self.measureThread.paused()
+        return self._pause_event.is_set() and self.inputThread.paused()
 
     def stopped(self):
-        return self._stop_event.is_set() and self.measureThread.stopped()
+        return self._stop_event.is_set() and self.inputThread.stopped()
 
 class InputThread(threading.Thread):
     def __init__(self,parent):
