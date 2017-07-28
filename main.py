@@ -247,7 +247,7 @@ class MainPage(QMainWindow):
 
         allstopped=True
         for p in self.Plots:
-            if p.Connection.stopped() and p.stopped():
+            if p.connection.stopped() and p.stopped():
                 allstopped=True
             else:
                 allstopped=False
