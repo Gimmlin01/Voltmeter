@@ -1,9 +1,26 @@
 #Default Connection class
 # author: Michael Auer
 
-import threading
+import threading,time
+from UT61C import Ut61c
 from queue import Queue
+from PyQt5.QtCore import QSettings
 
+
+class Dummy(object):
+    def __init__(self):
+        import random
+        super(Dummy,self).__init__()
+        self.a=random.random()
+        print("Running Dummy Connection")
+        self.startTime=time.time()
+
+    def measure(self):
+        import math
+        t=time.time()-self.startTime
+        value = math.sin(self.a*t)
+        time.sleep(0.1)
+        return value
 
 class Connection(object):
     def __init__(self):
@@ -12,6 +29,13 @@ class Connection(object):
         self._pause_event = threading.Event()
         self.outQueue=Queue()
         self.inputThread=InputThread(self)
+        settings = QSettings('yoxcu.de', 'Voltmeter')
+        activeConnection = settings.value('connection', None)
+        if activeConnection=="UT61C":
+            self.device=Ut61c()
+        else:
+            self.device=Dummy()
+
 
     def start(self):
         self._stop_event.clear()
@@ -74,16 +98,14 @@ class InputThread(threading.Thread):
         return self._pause_event.is_set()
 
     def run(self):
-        import random
-        import math
         import time
-        print("Running Dummy InputThread")
-        a=random.random()
+        print("Running InputThread")
         self.startTime=time.time()
         while not self.stopped():
             if not self.paused():
                 t=time.time()-self.startTime
-                self.parent.outQueue.put([[t,math.sin(a*t)]])
-                time.sleep(0.1)
+                value=self.parent.device.measure()
+                if (value):
+                    self.parent.outQueue.put([[t,value]])
             else:
                 time.sleep(0.5)

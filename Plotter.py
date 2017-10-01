@@ -5,9 +5,18 @@
 import pyqtgraph as pg
 import numpy as np
 import threading
-
+from PyQt5.QtCore import QSettings
+from PyQt5.QtGui import QColor
 #custom imports
 from Connection import Connection
+
+#Constants
+defaultColors=[
+QColor(5, 252, 82, 255),QColor(8, 248, 253, 255),QColor(253, 7, 241, 255),QColor(75, 0, 255, 255),
+QColor(255, 0, 0, 255),QColor(239, 41, 41, 255),QColor(138, 226, 52, 255),QColor(114, 159, 207, 255),
+QColor(173, 127, 168, 255),QColor(136, 138, 133, 255),QColor(164, 0, 0, 255),QColor(206, 92, 0, 255),
+QColor(196, 160, 0, 255),QColor(78, 154, 6, 255),QColor(32, 74, 135, 255),QColor(92, 53, 102, 255)
+]
 
 #Plot Class witch inherits from PlotWidget and holds the PlotData and has its
 #own Thead to liveplot things
@@ -30,6 +39,11 @@ class Plot(pg.PlotWidget):
         self.connection=None
         self.plotThread=None
 
+        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.setLabel("bottom","Zeit",units="s")
+        self.setLabel("left","Wert",units="V")
+        self.setLabel("right","Wert",units="A")
+        self.addLegend()
     #function to connect the updatePlot function to the newData Signal
     def connect(self):
         #connect the newData Signal to the updatePlot function
@@ -93,7 +107,8 @@ class Plot(pg.PlotWidget):
     #function to update the plot (must happen in Main Thread)
     def updatePlot(self,inpData=None):
         #plot the new data
-        self.plot(self.data, clear=True)
+        pen=pg.mkPen(color=self.settings.value("colors",defaultColors,QColor)[0],width=self.settings.value("lineThickness",3,int))
+        plot=self.plot(self.data, clear=True,pen=pen)
         #show status
         self.parent.statusBar().showMessage("Working",1000)
 
