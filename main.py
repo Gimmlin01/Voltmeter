@@ -2,76 +2,109 @@
 # author: Michael Auer
 
 #Standart imports
-import sys
-from PyQt5.QtWidgets import QMainWindow,QApplication, QWidget, QMessageBox, QAction,QHBoxLayout, QVBoxLayout,QTabWidget,QFileDialog,QLCDNumber
+import sys,os
+from PyQt5.QtWidgets import QMainWindow,QApplication, QWidget, QMessageBox, QAction,QHBoxLayout, QVBoxLayout,QTabWidget,QFileDialog
 from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QSettings,QSize,QPoint
 import numpy as np
 
 #custom imports
-from Plotter import Plot
+from Plotter import Plotter
+from Pages import SettingsPage, LcdPage
 
 #define mainPage
 class MainPage(QMainWindow):
     def __init__(self):
         super(MainPage,self).__init__()
-
+        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.settings.setValue("path",os.path.dirname(os.path.realpath(__file__)))
+        self.extract()
         #Array to save the Multiple Plots
         self.Plots=[]
-        self.lcd=LcdPage()
+        self.lcdPage=LcdPage()
+        self.settingsPage=SettingsPage()
         self.initUI()
+
+
+    # function wich handles the extraction and copy the bundled devices!
+    def extract(self):
+        try:
+            folder = self.settings.value("path","") + "\devices"
+            bundlefolder=resource_path("bundled")
+            devs=os.listdir(bundlefolder)
+            try:
+                os.mkdir(folder)
+            except:
+                pass
+            import shutil
+            for d in devs:
+                if not os.path.exists(folder+"/"+d):
+                    shutil.copy2(resource_path("bundled/"+d), folder)
+                    print(d+" extracted!")
+
+        except OSError as e:
+            print("extraction failed:" +str(e))
+
 
     def initUI(self):
         #cosmeticals
-        self.setGeometry(50, 50, 1000, 500)
+        self.resize(self.settings.value('mainPageSize', QSize(1000, 400)))
+        self.move(self.settings.value('mainPagePos', QPoint(50, 50)))
         self.setWindowTitle('Voltmeter')
-        self.setWindowIcon(QIcon('icons/AppIcon.png'))
+        self.setWindowIcon(QIcon(resource_path('icons/AppIcon.png')))
 
         #add Action to Close Programm
-        self.exitAction = QAction(QIcon('icons/ExitIcon.png'), '&Exit', self)
+        self.exitAction = QAction(QIcon(resource_path('icons/ExitIcon.png')), '&Exit', self)
         self.exitAction.setShortcut('Ctrl+Q')
         self.exitAction.setStatusTip('Exit application')
         self.exitAction.triggered.connect(self.close)
 
         #add Action to add New Plot and start Measuring
-        self.newMeasurementAction = QAction(QIcon('icons/PlusIcon.png'), '&New', self)
+        self.newMeasurementAction = QAction(QIcon(resource_path('icons/PlusIcon.png')), '&New', self)
         self.newMeasurementAction.setShortcut('Ctrl+N')
         self.newMeasurementAction.setStatusTip('Create New Measurement')
         self.newMeasurementAction.triggered.connect(self.newMeasure)
 
         #add Action to Display Current Value LCD Style
-        self.lcdToogleAction = QAction(QIcon('icons/NumberIcon.png'), '&LCD', self)
-        self.lcdToogleAction.setShortcut('Ctrl+L')
-        self.lcdToogleAction.setStatusTip('Display Current Value')
-        self.lcdToogleAction.triggered.connect(self.toggleLcd)
+        self.lcdPageToogleAction = QAction(QIcon(resource_path('icons/NumberIcon.png')), '&LCD', self)
+        self.lcdPageToogleAction.setShortcut('Ctrl+L')
+        self.lcdPageToogleAction.setStatusTip('Display Current Value')
+        self.lcdPageToogleAction.triggered.connect(self.toggleLcd)
+
+        #add Action to Open Settings
+        self.openSettingsAction = QAction(QIcon(resource_path('icons/SettingsIcon.png')), '&Settings', self)
+        self.openSettingsAction.setShortcut('Ctrl+E')
+        self.openSettingsAction.setStatusTip('Open Settings')
+        self.openSettingsAction.triggered.connect(self.openSettings)
 
         #add Action to Save the Data of the current Plot
-        self.saveDataAction = QAction(QIcon('icons/SaveIcon.png'), '&Save', self)
+        self.saveDataAction = QAction(QIcon(resource_path('icons/SaveIcon.png')), '&Save', self)
         self.saveDataAction.setShortcut('Ctrl+S')
         self.saveDataAction.setStatusTip('Save Plot Data')
         self.saveDataAction.triggered.connect(self.saveData)
 
         #add Action to Load the Data
-        self.loadDataAction = QAction(QIcon('icons/LoadIcon.png'), '&Open', self)
+        self.loadDataAction = QAction(QIcon(resource_path('icons/LoadIcon.png')), '&Open', self)
         self.loadDataAction.setShortcut('Ctrl+O')
         self.loadDataAction.setStatusTip('Open saved Plot Data')
         self.loadDataAction.triggered.connect(self.loadData)
 
         #add Action to Start Measuring again
-        self.startAction = QAction(QIcon('icons/StartIcon.png'), '&Start', self)
+        self.startAction = QAction(QIcon(resource_path('icons/StartIcon.png')), '&Start', self)
         self.startAction.setShortcut('Ctrl+R')
         self.startAction.setStatusTip('Start Measurement')
         self.startAction.triggered.connect(self.startMeasure)
         self.startAction.setEnabled(False)
 
         #add Action to Pause Measuring
-        self.pauseAction = QAction(QIcon('icons/PauseIcon.png'), '&Pause', self)
+        self.pauseAction = QAction(QIcon(resource_path('icons/PauseIcon.png')), '&Pause', self)
         self.pauseAction.setShortcut('Ctrl+P')
         self.pauseAction.setStatusTip('Pause Measurement')
         self.pauseAction.triggered.connect(self.pauseMeasure)
         self.pauseAction.setEnabled(False)
 
         #add Action to Stop Measuring
-        self.stopAction = QAction(QIcon('icons/StopIcon.png'), '&Stop', self)
+        self.stopAction = QAction(QIcon(resource_path('icons/StopIcon.png')), '&Stop', self)
         self.stopAction.setShortcut('Ctrl+C')
         self.stopAction.setStatusTip('Stop Measurement')
         self.stopAction.triggered.connect(self.stopMeasure)
@@ -84,6 +117,7 @@ class MainPage(QMainWindow):
         fileMenu.addAction(self.newMeasurementAction)
         fileMenu.addAction(self.saveDataAction)
         fileMenu.addAction(self.loadDataAction)
+        fileMenu.addAction(self.openSettingsAction)
         fileMenu.addAction(self.exitAction)
 
         #create Toolbar
@@ -92,9 +126,9 @@ class MainPage(QMainWindow):
         toolbar.addAction(self.exitAction)
         toolbar.addAction(self.newMeasurementAction)
         toolbar.addAction(self.startAction)
-        toolbar.addAction(self.pauseAction)
+        #toolbar.addAction(self.pauseAction)
         toolbar.addAction(self.stopAction)
-        toolbar.addAction(self.lcdToogleAction)
+        toolbar.addAction(self.lcdPageToogleAction)
 
         #create Main Widget
         self.tabWidget = QTabWidget()
@@ -114,10 +148,12 @@ class MainPage(QMainWindow):
     #function to make a new Plot
     def newPlot(self,start=False):
         #create new Plot
-        plotWidget = Plot(self)
-        self.Plots.append(plotWidget)
+        plotWidget = Plotter(self)
         if start:
-            plotWidget.start()
+            if not plotWidget.start():
+                return None
+
+        self.Plots.append(plotWidget)
         #New Plot Tab
         plotTab = QWidget()
         plotLayout = QVBoxLayout()
@@ -129,10 +165,11 @@ class MainPage(QMainWindow):
     #function to start Measuring again
     def startMeasure(self):
         #find the current Plot in the displayed tab
-        currPlot = self.tabWidget.currentWidget().findChild(Plot)
+        currPlot = self.tabWidget.currentWidget().findChild(Plotter)
         if currPlot.stopped():
             #if its stopped start it
-            currPlot.start()
+            if not currPlot.start():
+                return False
         elif currPlot.paused():
             #if its paused start it
             currPlot.unpause()
@@ -144,7 +181,7 @@ class MainPage(QMainWindow):
 
     #function to pause Measuring
     def pauseMeasure(self):
-        self.tabWidget.currentWidget().findChild(Plot).pause("User Paused")
+        self.tabWidget.currentWidget().findChild(Plotter).pause("User Paused")
         self.startAction.setEnabled(True)
         self.pauseAction.setEnabled(False)
         self.stopAction.setEnabled(True)
@@ -152,7 +189,10 @@ class MainPage(QMainWindow):
     #function to stop Measuring
     def stopMeasure(self):
         #stop current plot
-        self.tabWidget.currentWidget().findChild(Plot).stop("User Stopped")
+        self.tabWidget.currentWidget().findChild(Plotter).stop("User Stopped")
+        self.stopUi()
+
+    def stopUi(self):
         #change Actions
         self.startAction.setEnabled(True)
         self.pauseAction.setEnabled(False)
@@ -162,14 +202,14 @@ class MainPage(QMainWindow):
     def tabChanged(self):
         currWidget=self.tabWidget.currentWidget()
         if not currWidget==None:
-            currPlot=currWidget.findChild(Plot)
+            currPlot=currWidget.findChild(Plotter)
             #disconnect all Signals from all Plots (saves ressources), so they don't update their plot when not shown
             for p in self.Plots:
                 p.disconnectAll()
             #connect the current Plot (live Updates)
             currPlot.connect()
             #connect the Lcd to the current Plot
-            self.lcd.connectTo(currPlot)
+            self.lcdPage.connectTo(currPlot)
             #fix Actions
             if currPlot.stopped():
                 self.startAction.setEnabled(True)
@@ -187,11 +227,11 @@ class MainPage(QMainWindow):
             self.startAction.setEnabled(False)
             self.pauseAction.setEnabled(False)
             self.stopAction.setEnabled(False)
-            self.lcd.display(0.000)
+            self.lcdPage.display(0.000)
 
     #function to handle Tab Close
     def tabClosed(self,tab_index):
-        self.tabWidget.widget(tab_index).findChild(Plot).stop("Tab Closed")
+        self.tabWidget.widget(tab_index).findChild(Plotter).stop("Tab Closed")
         self.tabWidget.removeTab(tab_index)
 
     #function to save the data of the Current opened Plot
@@ -199,27 +239,40 @@ class MainPage(QMainWindow):
         fileName = QFileDialog.getSaveFileName(self, 'Dialog Title', '', filter='*.txt')[0]
         if fileName != "":
             #enshure it is a .txt file
-            if not fileName[len(fileName)-4:] == ".txt":
-                fileName=fileName+".txt"
-            np.savetxt(fileName,self.tabWidget.currentWidget().findChild(Plot).data)
+            if fileName[len(fileName)-4:] == ".txt":
+                fileName=fileName[:-4]
+            for i,d in enumerate(self.tabWidget.currentWidget().findChild(Plotter).data):
+                np.savetxt(fileName + "_Graph" + str(i)+".txt",d)
+
+
 
     #function to load data to a new Plot
     def loadData(self):
-        fileName = QFileDialog.getOpenFileName(self, 'Dialog Title', '', filter='*.txt')[0]
-        if fileName != "":
-            loadedData = np.loadtxt(fileName)
-            plotWidget = self.newPlot()
-            plotWidget.data=loadedData
-            plotWidget.updatePlot()
+        fileNames = QFileDialog.getOpenFileNames(self, 'Dialog Title', '', filter='*.txt')[0]
+        plotWidget = self.newPlot()
+        for f in fileNames:
+            if f != "":
+                loadedData = np.loadtxt(f)
+                plotWidget.newPlot(loadedData)
+
 
     #function to toggle Lcd on and off
     def toggleLcd(self):
-        if not self.lcd.isVisible():
-            self.lcd.display(0.000)
-            self.lcd.show()
+        if not self.lcdPage.isVisible():
+            self.lcdPage.display(0.000)
+            self.lcdPage.show()
         else:
-            self.lcd.close()
+            self.lcdPage.close()
 
+    #function to open Settings
+    def openSettings(self):
+        try:
+            if not self.settingsPage.isVisible():
+                self.settingsPage.show()
+            else:
+                self.settingsPage.close()
+        except Exception as e:
+            print(e)
 
     #override the closeEvent function to catch the event and do things
     def closeEvent(self, event):
@@ -232,26 +285,37 @@ class MainPage(QMainWindow):
         #     event.accept()
         # else:
         #     event.ignore()
-        self.lcd.close()
-        for p in self.Plots:
-            #Stop Connection and its Thread
-            if p.connection.stopped():
-                print("Connection already stopped")
-            else:
-                p.connection.stop("App CloseEvent")
-            #Stop Plot and its Thread
-            if p.stopped():
-                print("Plot already stopped")
-            else:
-                p.stop("App CloseEvent")
 
-        allstopped=True
-        for p in self.Plots:
-            if p.connection.stopped() and p.stopped():
-                allstopped=True
-            else:
-                allstopped=False
+        #close additional Windows
+        self.lcdPage.close()
+        self.settingsPage.close()
 
+        #save Window sizes
+        if (self.settings.value("Size",True,bool)):
+            self.settings.setValue("mainPageSize",self.size())
+        if (self.settings.value("Position",True,bool)):
+            self.settings.setValue("mainPagePos",self.pos())
+        try:
+            for p in self.Plots:
+                #Stop Connection and its Thread
+                if p.connection.stopped():
+                    print("Connection already stopped")
+                else:
+                    p.connection.stop("App CloseEvent")
+                #Stop Plot and its Thread
+                if p.stopped():
+                    print("Plot already stopped")
+                else:
+                    p.stop("App CloseEvent")
+
+            allstopped=True
+            for p in self.Plots:
+                if p.connection.stopped() and p.stopped():
+                    allstopped=True
+                else:
+                    allstopped=False
+        except:
+            allstopped=True
         #check if all are stopped
         if not allstopped:
             #ignore the event
@@ -261,27 +325,13 @@ class MainPage(QMainWindow):
         else:
             event.accept()
 
-#class for the LCD Page witch shows the Current Value
-class LcdPage(QLCDNumber):
-    def __init__(self):
-        super(LcdPage,self).__init__()
-        self.initUI()
-
-    def initUI(self):
-        #cosmeticals
-        self.setGeometry(1100, 50, 250 , 250)
-        self.setWindowTitle('LCD Display')
-        self.setWindowIcon(QIcon('icons/AppIcon.png'))
-
-    #connect the updateLcd function to the newData signal of the given plot
-    def connectTo(self,plot):
-        plot.newData.connect(self.updateLcd)
-
-    #update displayed value
-    def updateLcd(self,inpData):
-        self.display(inpData[0][1])
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 if __name__ == "__main__":
+
     #create Main app
     app = QApplication(sys.argv)
 
