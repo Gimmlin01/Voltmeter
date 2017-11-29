@@ -17,6 +17,7 @@ class Connection(threading.Thread):
         self.outQueue=Queue()
         self.settings = QSettings('yoxcu.de', 'Voltmeter')
         self.device=None
+        asdfölk
 
     def initDevice(self):
         try:
