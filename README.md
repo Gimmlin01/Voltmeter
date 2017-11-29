@@ -25,24 +25,24 @@ devices/:
 
 GUI aufbau:
 
-MainPage:
-  toolbar
-  menuBar
-  tabWidget:
-    Tab:
-      Plotter:
-        Plots:
-          Connection:
-            Device
+MainPage:\n
+  toolbar\n
+  menuBar\n
+  tabWidget:\n
+    Tab:\n
+      Plotter:\n
+        Plots:\n
+          Connection:\n
+            Device\n
 
 Erklärung der UT61C.py:
 
 Der Hersteller UNI-Trend hat sich dazu entschieden das Multimeter mit einem USB-Gerät auszustatten das sich als HID meldet. Dies hat den Vorteil das kein spezieller Treiber benötigt wird. Um nun die Daten auszulesen muss das python modul hid folgend benutzt werden:
 
-  dev = hid.device()
-  dev.open(6790,57352) #gerät mit VendorID,ProduktID (UT61C) öffnen
-  buf = [0x05,0x60, 0x09, 0x00, 0x60, 0x03] #sequenz zum starten der Übertragung
-  dev.send_feature_report(buf) #sequenz senden
+  dev = hid.device()\n
+  dev.open(6790,57352) #gerät mit VendorID,ProduktID (UT61C) öffnen\n
+  buf = [0x05,0x60, 0x09, 0x00, 0x60, 0x03] #sequenz zum starten der Übertragung\n
+  dev.send_feature_report(buf) #sequenz senden\n
 
 die buf sequenz musste mit einem USB-Sniffer ausgelesen zwischen UT61C und Originalprogramm.
 Die Daten kommen dann in vereinzelt in Tupeln wobei der erste Eintrag ein Konrollbyte (0xf1=ok 0xff=nok) im 2. das InfoByte und müssen in 14Byte Nachrichten unterteilt werden 	
