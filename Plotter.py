@@ -6,7 +6,7 @@ import pyqtgraph as pg
 import numpy as np
 import threading
 from PyQt5.QtCore import QSettings
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor,QFont
 #custom imports
 from Connection import Connection
 
@@ -20,12 +20,12 @@ QColor(196, 160, 0, 255),QColor(78, 154, 6, 255),QColor(32, 74, 135, 255),QColor
 
 #Plot Class witch inherits from PlotWidget and holds the PlotData and has its
 #own Thead to liveplot things
-class Plot(pg.PlotWidget):
+class Plotter(pg.PlotWidget):
     #newData Signal
     newData = pg.QtCore.Signal(object)
 
     def __init__(self,parent):
-        super(Plot, self).__init__()
+        super(Plotter, self).__init__()
 
         #save parent
         self.parent=parent
@@ -34,16 +34,18 @@ class Plot(pg.PlotWidget):
         self._stop_event.set()
         self._pause_event = threading.Event()
         #Define Array to contain Measured Points
-        self.data=np.empty([0,2])
+        self.data = []
         #init Variables
         self.connection=None
         self.plotThread=None
-
+        self.plots=[]
+        self.legend=None
+        self.xunit="xunit"
+        self.yunit="yunit"
         self.settings = QSettings('yoxcu.de', 'Voltmeter')
-        self.setLabel("bottom","Zeit",units="s")
-        self.setLabel("left","Wert",units="V")
-        self.setLabel("right","Wert",units="A")
-        self.addLegend()
+        self.parent.settingsPage.uiChange.connect(self.uiChange)
+        self.uiChange()
+
     #function to connect the updatePlot function to the newData Signal
     def connect(self):
         #connect the newData Signal to the updatePlot function
@@ -60,25 +62,33 @@ class Plot(pg.PlotWidget):
 
     #function to start the live Plot
     def start(self):
-        #it is now running
-        self._stop_event.clear()
         #establish Connection
         self.connection=Connection()
+        #start the Connection
+        if not self.connection.start():
+            self.stop("No Connection")
+            return False
+
         #create new Plot Thread to liveplot things
         self.plotThread=PlotThread(self)
-        #start the Connection
-        self.connection.start()
         #start the Thread
         self.plotThread.start()
+        self.newPlot()
+
+        #it is now running
+        self._stop_event.clear()
+        return True
 
     #make Plot stoppable
     def stop(self,reason=""):
+        print("Plot stop calles: " + reason)
         if not self._stop_event.is_set():
-            self.connection.stop()
+            self.connection.stop(reason)
+            self.parent.stopUi()
             #wati for the PlotThread to "finish"
             self.plotThread.wait()
             self._stop_event.set()
-            print("Plot stopped: " + reason)
+            print("Plot stopped")
 
     #make Plot pausable
     def pause(self,reason=""):
@@ -104,13 +114,52 @@ class Plot(pg.PlotWidget):
     def paused(self):
         return self._pause_event.is_set()
 
+    #function to add a New Plot to the Plotter
+    def newPlot(self,data=np.empty([0,2])):
+        lp=len(self.plots)
+        pen=pg.mkPen(color=self.settings.value("colors",defaultColors,QColor)[lp],width=self.settings.value("lineThickness",3,int))
+        self.data.append(data)
+        plot=self.plot(self.data[lp],pen=pen)
+        self.plots.append(plot)
+        if lp==1:
+            self.legend=self.addLegend()
+            self.legend.addItem(self.plots[0], "Graph 1")
+        if self.legend:
+            self.legend.addItem(plot, "Graph "+str(lp+1))
+        return plot
+
     #function to update the plot (must happen in Main Thread)
     def updatePlot(self,inpData=None):
+        lp=len(self.plots)-1
         #plot the new data
-        pen=pg.mkPen(color=self.settings.value("colors",defaultColors,QColor)[0],width=self.settings.value("lineThickness",3,int))
-        plot=self.plot(self.data, clear=True,pen=pen)
+        self.plots[lp].setData(self.data[lp])
+
+        if inpData:
+            if inpData[2] != self.xunit or inpData[3] != self.yunit:
+                self.xunit=inpData[2]
+                self.yunit=inpData[3]
+                self.uiChange()
         #show status
         self.parent.statusBar().showMessage("Working",1000)
+
+    #function witch is called if Something was changed in the Settings
+    def uiChange(self):
+        #get colors and width
+        c=self.settings.value("colors",defaultColors,QColor)
+        w=self.settings.value("lineThickness",3,int)
+        #create each pen and update colors and width
+        for i,p in enumerate(self.plots):
+            pen=pg.mkPen(color=c[i],width=w)
+            p.setPen(pen)
+        #update labelStyle
+        labelStyle = {'color': '#FFF', 'font-size': str(self.settings.value("axisThickness",20,int))+"px"}
+        self.setLabel("bottom",self.xunit[0],units=self.xunit[1],**labelStyle)
+        self.setLabel("left",self.yunit[0],units=self.yunit[1],**labelStyle)
+        font=QFont()
+        font.setPixelSize(self.settings.value("tickThickness",15,int))
+        self.getAxis("bottom").tickFont = font
+        self.getAxis("left").tickFont = font
+
 
 #PlotThread Class inherits from QThread
 #looks for Items in Queue and if one found calls for an Plot update
@@ -124,9 +173,11 @@ class PlotThread(pg.QtCore.QThread):
 
     #make Thead stoppable
     def stop(self,reason=""):
+        print("PlotThread stop called: " + reason)
         if not self._stop_event.is_set():
             self._stop_event.set()
-            print("PlotThread stopped: " + reason)
+            self.parent.stop(reason)
+            print("PlotThread stopped")
 
     #function to check if Thread has stopped
     def stopped(self):
@@ -134,14 +185,16 @@ class PlotThread(pg.QtCore.QThread):
 
     #custom run function
     def run(self):
-        print("Running Default PlotThread")
+        print("Running PlotThread")
         while not self.stopped():
             #get Item from inQueue
             inpData=self.inQueue.get()
             if inpData == None:
                 self.stop("Input Queue shutdown")
-            else:
+            elif inpData:
+                lp=len(self.parent.plots)-1
+                time,value,xunit,yunit=inpData
                 #append inpData to the data array
-                self.parent.data=np.append(self.parent.data,inpData,axis=0)
+                self.parent.data[lp]=np.append(self.parent.data[lp],[(time,value)],axis=0)
                 #broadcast the new data array
                 self.parent.newData.emit(inpData)
