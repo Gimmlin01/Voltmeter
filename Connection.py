@@ -23,6 +23,10 @@ class Connection(threading.Thread):
             activeConnection = self.settings.value('connection', "Dummy")
             if activeConnection:
                 sys.path.append(self.settings.value("path",""))
+<<<<<<< HEAD
+=======
+                print(sys.path)
+>>>>>>> d397bc90ef76c5c6779299cc5661e71da4dcc2b7
                 folderModule = importlib.import_module("devices")
                 deviceModule = importlib.import_module("devices."+activeConnection)
                 importlib.reload(folderModule)
