@@ -36,7 +36,7 @@ class Ut61c(object):
         #byte 10
         self.mode={
             0x80: "V",
-            0x20: "Ohm",
+            0x20: u'\u03A9',
             0x08: "Hz",
             0x02: "°C",
             0x01: "°F",

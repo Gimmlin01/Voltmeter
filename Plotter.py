@@ -117,7 +117,7 @@ class Plotter(pg.PlotWidget):
     #function to add a New Plot to the Plotter
     def newPlot(self,data=np.empty([0,2])):
         lp=len(self.plots)
-        pen=pg.mkPen(color=self.settings.value("colors",defaultColors,QColor)[lp],width=self.settings.value("lineThickness",3,int))
+        pen=pg.mkPen(color=self.settings.value("colors",defaultColors,QColor)[lp%16],width=self.settings.value("lineThickness",3,int))
         self.data.append(data)
         plot=self.plot(self.data[lp],pen=pen)
         self.plots.append(plot)

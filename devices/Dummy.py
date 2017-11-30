@@ -24,7 +24,7 @@ class Dummy(object):
         import math
         yvalue=time.time()-self.startTime
         # Do your Magic
-        xvalue = math.sin(self.a*yvalue)
-        time.sleep(0.1)
+        xvalue =0.0015* math.sin(self.a*yvalue)
+        time.sleep(0.01)
         #-----IMPORTANT funciton must return (MEASURED VALUE as int/float ,UNIT as String only A not mA (automagical))
-        return (yvalue,xvalue,("Zeit","s"),("x","unit"))
+        return (yvalue,xvalue,("Zeit","s"),("x","m"))

@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QWidget,QHBoxLayout, QVBoxLayout,QGroupBox,QRadioButton,QGridLayout,QPushButton,QCheckBox,QSpinBox,QLabel,QColorDialog,QLCDNumber
-from PyQt5.QtGui import QIcon,QColor
+from PyQt5.QtWidgets import QWidget,QHBoxLayout, QVBoxLayout,QGroupBox,QRadioButton,QGridLayout,QPushButton,QCheckBox,QSpinBox,QLabel,QColorDialog,QLCDNumber,QGridLayout
+from PyQt5.QtGui import QIcon,QColor,QFont
 from PyQt5.QtCore import QSettings,QSize,QPoint,Signal,Qt
 from functools import partial
 import sys,os
@@ -10,6 +10,9 @@ QColor(255, 0, 0, 255),QColor(239, 41, 41, 255),QColor(138, 226, 52, 255),QColor
 QColor(173, 127, 168, 255),QColor(136, 138, 133, 255),QColor(164, 0, 0, 255),QColor(206, 92, 0, 255),
 QColor(196, 160, 0, 255),QColor(78, 154, 6, 255),QColor(32, 74, 135, 255),QColor(92, 53, 102, 255)
 ]
+
+prefix = {-24:"y",-21:"z",-18:"a",-15:"f",-12:"p",-9:"n",-6:"u",-3:"m",-2:"c",-1:"d",0:"",
+                3:"k",6:"M",9:"G",12:"T",15:"P",18:"E",21:"Z",24:"Y"}
 
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
@@ -191,20 +194,39 @@ class SettingsPage(QWidget):
 
 
 #class for the LCD Page witch shows the Current Value
-class LcdPage(QLCDNumber):
+class LcdPage(QWidget):
     def __init__(self):
-        super(QLCDNumber,self).__init__()
+        super(LcdPage,self).__init__()
         self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.resizeEvent = self.onResize
         self.initUI()
+
+    def onResize(self,event):
+        self.font.setPixelSize(self.height()*0.65)
+        self.text.setFont(self.font)
 
     def initUI(self):
         #cosmeticals
-        self.resize(self.settings.value('lcdPageSize', QSize(250, 250)))
+        self.resize(self.settings.value('lcdPageSize', QSize(200, 350)))
         self.move(self.settings.value('lcdPagePos', QPoint(1100, 50)))
         self.setWindowTitle('LCD Display')
         self.setWindowIcon(QIcon(resource_path('icons/AppIcon.png')))
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
+        grid=QGridLayout()
+        self.lcd=QLCDNumber()
+        self.lcd.setDigitCount(5)
+        self.text=QLabel("unit")
+        self.font=QFont()
+        self.font.setPixelSize(self.height()*0.65)
+        self.text.setFont(self.font)
+        grid.addWidget(self.lcd,0,0)
+        grid.addWidget(self.text,0,1)
+        grid.setColumnStretch(0,5)
+        grid.setColumnStretch(1,1)
+        self.setLayout(grid)
 
+    def display(self,what):
+        self.lcd.display(what)
 
     #connect the updateLcd function to the newData signal of the given plot
     def connectTo(self,plot):
@@ -212,7 +234,30 @@ class LcdPage(QLCDNumber):
 
     #update displayed value
     def updateLcd(self,inpData):
-        self.display(inpData[1])
+        number,prefix = self.parseNumber(inpData[1])
+        self.display(round(number,2))
+        self.lcd.setDigitCount(len(str(round(number,2))))
+        self.text.setText(str(prefix) + str(inpData[3][1]))
+
+    def parseNumber(self,n,s=0):
+        nt=abs(n)
+        if nt == 0:
+            return (0,prefix[0])
+        elif nt >1000:
+            return self.parseNumber(n/1000,s+3)
+        elif nt<1:
+            if s > -3:
+                return self.parseNumber(n*10,s-1)
+            elif s<-24:
+                return (0,prefix[0])
+            else:
+                return self.parseNumber(n*1000,s-3)
+        elif nt<10:
+                return (round(n,2),prefix[s])
+        elif nt<100:
+            return (round(n,1),prefix[s])
+        else:
+            return (round(n,0),prefix[s])
 
     #override the closeEvent function to catch the event and do things
     def closeEvent(self, event):
