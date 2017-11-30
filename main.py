@@ -242,7 +242,7 @@ class MainPage(QMainWindow):
             if fileName[len(fileName)-4:] == ".txt":
                 fileName=fileName[:-4]
             for i,d in enumerate(self.tabWidget.currentWidget().findChild(Plotter).data):
-                np.savetxt(fileName + "_Graph" + str(i)+".txt",d)
+                np.savetxt(fileName + "_Graph" + str(i+1)+".txt",d)
 
 
 
