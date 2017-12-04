@@ -9,11 +9,11 @@ Programm Besteht aus mehreren Teilen:
   MainPage in der die verschiedenen Aktionen und das TabWidget sitzt in dem die Plots dargestellt werden.
 
 ### Pages.py:
-  Verwaltet die verschiedenen Seiten die das Programm benötigt
+Verwaltet die verschiedenen Seiten die das Programm benötigt
 
 #### Seiten:
-    * LcdPage: Seite in der der Aktuelle Messwert angezeigt werden kann.
-    * SettingsPage: Seite für das Einstellen der Schriftgröße/Strichdicke, ...
+* LcdPage: Seite in der der Aktuelle Messwert angezeigt werden kann.
+* SettingsPage: Seite für das Einstellen der Schriftgröße/Strichdicke, ...
 
 ### Connection.py:
   Dieser Programmteil is für die verständigung zwischen Programm <-> Gerät zuständig
@@ -25,8 +25,8 @@ Programm Besteht aus mehreren Teilen:
   Ebenso einen PlotThread in dem die OUT Schlange der Connection ausgelesen und in den neuesten Plot geschrieben wird.
 
 ### devices/:
-  * Dummy.py Ein Beispiel Gerät was die nötigsten Funktionalitäten besitzt.
-  * UT61C.py Die UT61C klasse die kommunikation mit dem Gerät ermöglicht.
+* Dummy.py Ein Beispiel Gerät was die nötigsten Funktionalitäten besitzt.
+* UT61C.py Die UT61C klasse die kommunikation mit dem Gerät ermöglicht.
 
 
 ## GUI aufbau:
@@ -64,10 +64,10 @@ Die Daten kommen dann in vereinzelt in Tupeln wobei der erste Eintrag ein Konrol
   In dem Ordner in dem das Programm ausgeführt wird sollte sich ein devices Ordner befinden wenn man in den Einstellungen die Devices enpackt hat.
   In disem Ordner befindet sich eine Dummy.py diese beinhaltet alle wichtigen Funkionen:
 
-# wichtigste Funkionen:
-    * measure(): Diese Funktion muss eine Tupel mit (y,x,"x AchsenBeschriftung","y AchsenBeschriftung") zurückgeben
-    * isOpen(): Diese Funkion gibt True zurück falls das Gerät bereit ist um Daten zu übertragen.
-    * warningText: Eine Tupel mit den Texten ("Text1","Text2","Detail") für die Warnung falls das gerät nicht bereit ist.
+### wichtigste Funkionen:
+* measure(): Diese Funktion muss eine Tupel mit (y,x,"x AchsenBeschriftung","y AchsenBeschriftung") zurückgeben
+* isOpen(): Diese Funkion gibt True zurück falls das Gerät bereit ist um Daten zu übertragen.
+* warningText: Eine Tupel mit den Texten ("Text1","Text2","Detail") für die Warnung falls das gerät nicht bereit ist.
   Nun diese Dummy datei in eine "meinNeuesGerät.py" und die Klasse in der Datei mit dem Namen "meinNeuesGerät" umbenennen und die funktionen nach belieben abändern
 
 ## Kompilieren des Scriptes mit pyinstaller:
