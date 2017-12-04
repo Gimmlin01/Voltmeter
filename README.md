@@ -1,28 +1,41 @@
-### LMU Voltmeter
+# LMU Voltmeter
+
+Ein Programm das zur Live Darstellung einer Messung mit einem Multimeter genutzt wird.
+
 ## Programm Aufbau
+
 Programm Besteht aus mehreren Teilen:
-# main.py:
+
+### main.py:
+
   Verantwortlich für die GUI(PyQT5).
   MainPage in der die verschiedenen Aktionen und das TabWidget sitzt in dem die Plots dargestellt werden.
-  -Pages.py
-    LcdPage in der der Aktuelle Messwert angezeigt werden kann.
-    SettingsPage Seite für das Einstellen der Schriftgröße/Strichdicke, ...
 
-# Connection.py:
+### Pages.py:
+
+  Verwaltet die verschiedenen Seiten die das Programm benötigt
+    * LcdPage in der der Aktuelle Messwert angezeigt werden kann.
+    * SettingsPage Seite für das Einstellen der Schriftgröße/Strichdicke, ...
+
+### Connection.py:
+
   Dieser Programmteil is für die verständigung zwischen Programm - Gerät zuständig
   Er besteht aus einem Thread der im Hintergrund läuft und das ausgewählte Gerät immer wieder "ausliest" indem er jede ankommende Messung sofort ausliest parst und in eine OUT Schlange schiebt die später vom Plotter ausgelesen wird.
 
-# Plotter.py:
+### Plotter.py:
+
   Plotter ist eine Klasse die ein pyqtgraph.PlotWidget ergänzt:
   Sie besitzt die nötigen variablen um die daten der verschiedenen plots zu speichern
   Ebenso einen PlotThread in dem die OUT Schlange der Connection ausgelesen und in den neuesten Plot geschrieben wird.
 
-# devices/:
-  Dummy.py Ein Beispiel Gerät was die nötigsten Funktionalitäten besitzt.
-  UT61C.py Die UT61C klasse die kommunikation mit dem Gerät ermöglicht.
+### devices/:
+
+  * Dummy.py Ein Beispiel Gerät was die nötigsten Funktionalitäten besitzt.
+  * UT61C.py Die UT61C klasse die kommunikation mit dem Gerät ermöglicht.
 
 
 ## GUI aufbau:
+
 ---
 MainPage:
   toolbar
@@ -61,6 +74,7 @@ Die Daten kommen dann in vereinzelt in Tupeln wobei der erste Eintrag ein Konrol
     warningText: Eine Tupel mit den Texten ("Text1","Text2","Detail") für die Warnung falls das gerät nicht bereit ist.
   Nun diese Dummy datei in eine "meinNeuesGerät.py" und die Klasse in der Datei mit dem Namen "meinNeuesGerät" umbenennen und die funktionen abändern
 
+## Kompilieren des Scriptes mit pyinstaller:
 Falls die exe neu kompiliert werden soll bitte nicht vergessen neue geräte in der build.spec bei a=Analysis["Gerät1","Gerät2"] einzutragen um zusätzliche Imports zu sichern. Dann einfach die build.bat ausführen und die verschiedenen abhänigkeiten über pip installieren.
 
 
