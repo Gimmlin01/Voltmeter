@@ -33,7 +33,7 @@ Verwaltet die verschiedenen Seiten die das Programm benötigt
 ```
 MainPage:
   toolbar
-    menuBar
+  menuBar
   tabWidget:
     Tab:
       Plotter:
@@ -61,7 +61,7 @@ Die Daten kommen dann in vereinzelt in Tupeln wobei der erste Eintrag ein Konrol
 
 
 ## Hinzufügen neuer Geräte:
-  In dem Ordner in dem das Programm ausgeführt wird sollte sich ein devices Ordner befinden wenn man in den Einstellungen die Devices enpackt hat.
+  Wenn man in den Einstellungen die Devices entpackt hat sollte sich in dem Ordner in dem das Programm ausgeführt wird ein devices Ordner befinden.
   In disem Ordner befindet sich eine Dummy.py diese beinhaltet alle wichtigen Funkionen:
 
 ### wichtigste Funkionen:
@@ -76,4 +76,5 @@ Falls die exe neu kompiliert werden soll bitte nicht vergessen neue geräte in d
 
 
 All Icons made by http://www.flaticon.com/authors/freepik from www.flaticon.com
+
 author: Michael Auer
