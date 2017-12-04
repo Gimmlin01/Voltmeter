@@ -16,34 +16,13 @@ from Pages import SettingsPage, LcdPage
 class MainPage(QMainWindow):
     def __init__(self):
         super(MainPage,self).__init__()
-        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.settings = QSettings('LMU-Muenchen', 'Voltmeter')
         self.settings.setValue("path",os.path.dirname(os.path.realpath(__file__)))
-        self.extract()
         #Array to save the Multiple Plots
         self.Plots=[]
         self.lcdPage=LcdPage()
         self.settingsPage=SettingsPage()
         self.initUI()
-
-
-    # function wich handles the extraction and copy the bundled devices!
-    def extract(self):
-        try:
-            folder = self.settings.value("path","") + "\devices"
-            bundlefolder=resource_path("bundled")
-            devs=os.listdir(bundlefolder)
-            try:
-                os.mkdir(folder)
-            except:
-                pass
-            import shutil
-            for d in devs:
-                if not os.path.exists(folder+"/"+d):
-                    shutil.copy2(resource_path("bundled/"+d), folder)
-                    print(d+" extracted!")
-
-        except OSError as e:
-            print("extraction failed:" +str(e))
 
 
     def initUI(self):

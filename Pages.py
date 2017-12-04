@@ -14,6 +14,7 @@ QColor(196, 160, 0, 255),QColor(78, 154, 6, 255),QColor(32, 74, 135, 255),QColor
 prefix = {-24:"y",-21:"z",-18:"a",-15:"f",-12:"p",-9:"n",-6:"u",-3:"m",-2:"c",-1:"d",0:"",
                 3:"k",6:"M",9:"G",12:"T",15:"P",18:"E",21:"Z",24:"Y"}
 
+#function witch maps relative_path to absolute path
 def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
@@ -22,36 +23,39 @@ def resource_path(relative_path):
 #class for the Settings Dialog
 class SettingsPage(QWidget):
 
+    #Signal wich emits on an UI Settings change
     uiChange = Signal(object)
 
     def __init__(self):
         super(SettingsPage,self).__init__()
-        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.settings = QSettings("LMU-Muenchen", 'Voltmeter')
         self.resize(self.settings.value('settingsPageSize', QSize(250, 250)))
         self.move(self.settings.value('settingsPagePos', QPoint(1100, 50)))
         self.devs=[]
         self.initDevices()
         self.initUI()
 
+    #function to scan all devices in devicePath
     def initDevices(self):
         self.devs=[]
         try:
-            devs=os.listdir("devices")
+            devs=os.listdir(self.settings.value("devicePath",resource_path("bundled")))
             for d in devs:
                 if d[-3:] == ".py" and d[:2] != "__":
                     print(d+" found!")
                     self.devs.append(d[:-3])
         except:
-            print("Device folder not found")
+            print(self.settings.value("devicePath","bundled") +" folder not found")
             devs=None
 
-
+    #function to show the Page
     def show(self):
         QWidget().setLayout(self.grid)
         self.initDevices()
         self.initUI()
         super(SettingsPage, self).show()
 
+    #function to initiate UI
     def initUI(self):
         #cosmeticals
         self.setWindowTitle('Settings')
@@ -60,7 +64,7 @@ class SettingsPage(QWidget):
         self.grid = QGridLayout()
 
         #Create Menu to Choose Connections
-        self.conGroupBox=QGroupBox("Connections")
+        self.conGroupBox=QGroupBox("Devices")
         conVbox = QVBoxLayout()
         activeConnection = self.settings.value("connection","Dummy")
         for d in self.devs:
@@ -70,6 +74,13 @@ class SettingsPage(QWidget):
             if (d==activeConnection):
                 radio.setChecked(True)
         conVbox.addStretch(1)
+
+        #Create Possibility to extract devices
+        if not self.settings.value("devicePath",False):
+            extractButton = QPushButton("extract Devices")
+            extractButton.clicked.connect(lambda:self.extract())
+            conVbox.addWidget(extractButton)
+
         self.conGroupBox.setLayout(conVbox)
         self.grid.addWidget(self.conGroupBox)
 
@@ -150,35 +161,39 @@ class SettingsPage(QWidget):
         #set Grid as Layout
         self.setLayout(self.grid)
 
+    #function to Pick color for color[nr]
     def colorPicker(self,nr):
         colors=self.settings.value("colors",defaultColors,QColor)
         colors[nr] = QColorDialog.getColor(colors[nr])
         self.settings.setValue("colors",colors)
         self.uiChange.emit(None)
-        QWidget().setLayout(self.grid)
-        self.initUI()
-
+        self.show()
+    #function to set connection to wich
     def setConnection(self,wich):
         if (wich.isChecked()):
             self.settings.setValue('connection', wich.text())
 
+    #function to set settings to checkbutton state
     def toggled(self,wich):
         self.settings.setValue(wich.text(), wich.isChecked())
 
+    #function to reset Settings
     def resetSettings(self):
-        QWidget().setLayout(self.grid)
         self.settings.clear()
-        self.initUI()
         self.uiChange.emit(None)
+        self.show()
 
+    #function to change Axis Thickness
     def changeAxisThickness(self,thick):
         self.settings.setValue("axisThickness",thick)
         self.uiChange.emit(None)
 
+    #function to change Tick Thickness
     def changeTickThickness(self,thick):
         self.settings.setValue("tickThickness",thick)
         self.uiChange.emit(None)
 
+    #function to change Line Thickess
     def changeLineThickness(self,thick):
         self.settings.setValue("lineThickness",thick)
         self.uiChange.emit(None)
@@ -191,20 +206,43 @@ class SettingsPage(QWidget):
         if (self.settings.value("Position",True,bool)):
             self.settings.setValue("settingsPagePos",self.pos())
 
+    # function wich handles the extraction and copy the bundled devices!
+    def extract(self):
+        self.settings.setValue("devicePath","devices")
+        print("extracting")
+        try:
+            folder = self.settings.value("path","") + "\devices"
+            bundlefolder=resource_path("bundled")
+            devs=os.listdir(bundlefolder)
+            try:
+                os.mkdir(folder)
+            except:
+                pass
+            import shutil
+            for d in devs:
+                if not os.path.exists(folder+"/"+d):
+                    shutil.copy2(resource_path("bundled/"+d), folder)
+                    print(d+" extracted!")
 
+        except OSError as e:
+            print("extraction failed:" +str(e))
+
+        self.show()
 
 #class for the LCD Page witch shows the Current Value
 class LcdPage(QWidget):
     def __init__(self):
         super(LcdPage,self).__init__()
-        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.settings = QSettings('LMU-Muenchen', 'Voltmeter')
         self.resizeEvent = self.onResize
         self.initUI()
 
+    #function to adapt to resized window size
     def onResize(self,event):
-        self.font.setPixelSize(self.height()*0.65)
+        self.font.setPixelSize(self.height()*0.3)
         self.text.setFont(self.font)
 
+    #function to initiate UI
     def initUI(self):
         #cosmeticals
         self.resize(self.settings.value('lcdPageSize', QSize(200, 350)))
@@ -212,12 +250,14 @@ class LcdPage(QWidget):
         self.setWindowTitle('LCD Display')
         self.setWindowIcon(QIcon(resource_path('icons/AppIcon.png')))
         self.setWindowFlags(Qt.WindowStaysOnTopHint)
+
+        #add the Layout
         grid=QGridLayout()
         self.lcd=QLCDNumber()
         self.lcd.setDigitCount(5)
         self.text=QLabel("unit")
         self.font=QFont()
-        self.font.setPixelSize(self.height()*0.65)
+        self.font.setPixelSize(self.height()*0.3)
         self.text.setFont(self.font)
         grid.addWidget(self.lcd,0,0)
         grid.addWidget(self.text,0,1)
@@ -225,6 +265,7 @@ class LcdPage(QWidget):
         grid.setColumnStretch(1,1)
         self.setLayout(grid)
 
+    #function to display the given number on its lcd
     def display(self,what):
         self.lcd.display(what)
 
@@ -239,6 +280,7 @@ class LcdPage(QWidget):
         self.lcd.setDigitCount(len(str(round(number,2))))
         self.text.setText(str(prefix) + str(inpData[3][1]))
 
+    #function to parse the number n to write it like kV or mV
     def parseNumber(self,n,s=0):
         nt=abs(n)
         if nt == 0:

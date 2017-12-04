@@ -42,7 +42,7 @@ class Plotter(pg.PlotWidget):
         self.legend=None
         self.xunit="xunit"
         self.yunit="yunit"
-        self.settings = QSettings('yoxcu.de', 'Voltmeter')
+        self.settings = QSettings('LMU-Muenchen', 'Voltmeter')
         self.parent.settingsPage.uiChange.connect(self.uiChange)
         self.uiChange()
 

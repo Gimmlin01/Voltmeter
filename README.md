@@ -61,6 +61,7 @@ Hinzufügen neuer Geräte:
     warningText: Eine Tupel mit den Texten ("Text1","Text2","Detail") für die Warnung falls das gerät nicht bereit ist.
   Nun diese Dummy datei in eine "meinNeuesGerät.py" und die Klasse in der Datei mit dem Namen "meinNeuesGerät" umbenennen und die funktionen abändern
 
+Falls die exe neu kompiliert werden soll bitte nicht vergessen neue geräte in der build.spec bei a=Analysis["Gerät1","Gerät2"] einzutragen um zusätzliche Imports zu sichern. Dann einfach die build.bat ausführen und die verschiedenen abhänigkeiten über pip installieren.
 
 
 
