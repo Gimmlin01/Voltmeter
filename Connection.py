@@ -26,8 +26,9 @@ class Connection(threading.Thread):
                 if self.settings.value("devicePath",False):
                     sys.path.append(self.settings.value("path",""))
                 #import the modules
-                folderModule = importlib.import_module(self.settings.value("devicePath","bundled"))
-                deviceModule = importlib.import_module(self.settings.value("devicePath","bundled")+"."+activeConnection)
+                path = self.settings.value("devicePath","bundled")
+                folderModule = importlib.import_module(path)
+                deviceModule = importlib.import_module(path+"."+activeConnection)
                 #reload module if already imported before
                 importlib.reload(folderModule)
                 importlib.reload(deviceModule)
@@ -35,7 +36,7 @@ class Connection(threading.Thread):
                 return getattr(deviceModule, activeConnection)()
         except Exception as e:
             text="Device not initiated"
-            textd="There is a problem in the "+activeConnection+".py in the device folder.\nMake sure you Name each Device Class like its filename:\n Dummy -> Dummy.py"
+            textd="There is a problem in the "+activeConnection+".py in the "+path+" folder.\nMake sure you Name each Device Class like its filename:\n Dummy -> Dummy.py"
             self.showDialog(t=text,td=textd,ti=str(e))
 
     #function to start the Connection
